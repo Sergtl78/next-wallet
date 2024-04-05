@@ -1,12 +1,14 @@
+'use client'
+import { walletError } from '@/redux/features/wallet-slice'
+import { useAppSelector } from '@/redux/hooks'
 import { Box } from '@mui/material'
-type Props = {
-  message: string
-}
 
-const ErrorComponent = ({ message }: Props) => {
+const ErrorWallet = () => {
+  const error = useAppSelector(walletError)
+  console.log('errorEEE', error)
+
   return (
     <Box
-      onClick={() => window.location.reload()}
       sx={{
         mt: '1rem',
         color: 'error.main',
@@ -18,9 +20,9 @@ const ErrorComponent = ({ message }: Props) => {
         borderRadius: '0.5rem'
       }}
     >
-      ⚠️ {message} ⚠️
+      ⛔ {error}
     </Box>
   )
 }
 
-export default ErrorComponent
+export default ErrorWallet

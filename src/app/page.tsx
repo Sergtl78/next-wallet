@@ -9,8 +9,7 @@ export default function Home() {
         justifyContent: 'center',
         alignItems: 'center',
         height: '100vh',
-        width: '100%',
-        
+        width: '100%'
       }}
     >
       <Wallet />

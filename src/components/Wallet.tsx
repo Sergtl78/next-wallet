@@ -1,113 +1,49 @@
 'use client'
-import { chainList } from '@/constants/chain'
-import { Box, Button, Chip, Paper, Typography } from '@mui/material'
-import { ethers } from 'ethers'
-import { useCallback, useEffect, useState } from 'react'
-import ErrorComponent from './ErrorComponent'
+import {
+  getChainId,
+  walletActions,
+  walletIsConnect,
+  walletIsError
+} from '@/redux/features/wallet-slice'
+import { useActionCreators, useAppSelector } from '@/redux/hooks'
+import { Box, Paper } from '@mui/material'
+import { useEffect } from 'react'
+import CheckNetwork from './CheckNetwork'
+import ErrorComponent from './ErrorWallet'
 import FormComponent from './FormComponent'
+import Initial from './Initial'
+import WalletHeader from './WalletHeader'
 
-type WalletData = {
-  accounts: string[]
-  balance: string
-  chainId: string
-}
-const initialWalletData: WalletData = {
-  accounts: [],
-  balance: '',
-  chainId: ''
-}
-const Wallet = () => {
-  const [error, setError] = useState<string>('')
-  const [wallet, setWallet] = useState<WalletData>(initialWalletData)
-  const [isConnecting, setIsConnecting] = useState(false)
-  const [isConnect, setIsConnect] = useState(false)
-
-  const updateAccounts = async (accounts?: string[]) => {
-    const selectedAccounts =
-      accounts ||
-      (await window.ethereum?.request({
-        method: 'eth_requestAccounts'
-      }))
-
-    if (selectedAccounts.length === 0) {
-      setWallet(initialWalletData)
-      return
-    }
-    const provider = new ethers.BrowserProvider(window.ethereum)
-    const balance = await provider.getBalance(selectedAccounts[0])
-    const chainId = (await provider.getNetwork()).chainId
-
-    if (Number(chainId) !== 11155111)
-      setError('Please connect to Sepolia network')
-    setWallet({
-      accounts: selectedAccounts,
-      balance: ethers.formatEther(balance),
-      chainId: chainId.toString()
-    })
+declare global {
+  interface Window {
+    ethereum: any
   }
+}
 
-  const handleChangeAccount = useCallback(
-    async ({ accounts }: { accounts: string[] }) => {
-      await updateAccounts(accounts)
-      if (accounts?.length === 0) {
-        setIsConnect(false)
-      } else {
-        setIsConnect(true)
-      }
-    },
-    []
-  )
-
-  const handleChangeChain = useCallback(async (chainId: string) => {
-    window.location.reload()
-    updateAccounts()
-  }, [])
+const Wallet = () => {
+  const action = useActionCreators(walletActions)
+  const isError = useAppSelector(walletIsError)
+  const isConnect = useAppSelector(walletIsConnect)
+  const chainId = useAppSelector(getChainId)
 
   useEffect(() => {
     if (!window.ethereum) return
-    /* const isMetamask = window.ethereum.isMetaMask ?? false
-    if (!isMetamask) {
-      setError('Please install Metamask')
-      return
-    } */
-    const getConnect = async () => {
-      const accounts = await window.ethereum?.request({
-        method: 'eth_accounts'
-      })
-      if (accounts?.length === 0) {
-        setIsConnect(false)
-      } else {
-        setIsConnect(true)
-      }
-      updateAccounts(accounts)
-    }
-    getConnect()
 
-    window.ethereum?.on('accountsChanged', handleChangeAccount)
+    window.ethereum.on('chainChanged', (chainId: string) => {
+      action.setChainId(chainId)
+      console.log('chainId', chainId)
 
-    window.ethereum?.on('chainChanged', handleChangeChain)
-
+      window.location.reload()
+    })
+    window.ethereum.on(`accountsChanged`, (accounts: string[]) => {
+      action.setAccounts(accounts)
+    })
     return () => {
-      window.ethereum?.removeListener('accountsChanged', handleChangeAccount)
+      window.ethereum.removeListener('chainChanged', () => {})
+      window.ethereum.removeListener('accountsChanged', () => {})
+    }
+  }, [action])
 
-      window.ethereum?.removeListener('chainChanged', handleChangeChain)
-    }
-  }, [handleChangeAccount, handleChangeChain])
-  const connect = async () => {
-    setIsConnecting(true)
-    try {
-      await window.ethereum?.request({
-        method: 'eth_requestAccounts'
-      })
-      setError('')
-      updateAccounts()
-    } catch (error: any) {
-      setError(error.message)
-    }
-    setIsConnecting(false)
-  }
-  const name = chainList[wallet.chainId]?.name
-  const symbol = chainList[wallet.chainId]?.symbol
   return (
     <Box
       sx={{
@@ -128,52 +64,30 @@ const Wallet = () => {
           padding: '1rem',
           display: 'flex',
           width: '100%',
-
+          borderRadius: '1rem',
           flexDirection: 'column'
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            mb: '1rem'
-          }}
-        >
-          <Chip
-            label={wallet.accounts[0]}
-            color='secondary'
-            sx={{ mb: '1rem', width: 'fit-content' }}
-          />
-          <Typography variant='h4'>{name}</Typography>
-          <Typography variant='h4'>{wallet.balance + ' ' + symbol}</Typography>
-        </Box>
+        {!isConnect ? (
+          <Initial />
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              mb: '1rem'
+            }}
+          >
+            <WalletHeader />
+            <CheckNetwork currentChainId={chainId} />
+            <FormComponent />
+          </Box>
+        )}
 
-        {!isConnect && (
-          <Button
-            disabled={isConnecting}
-            onClick={connect}
-            variant='contained'
-            color='primary'
-            sx={{ width: '100%', borderRadius: '0.5rem' }}
-          >
-            🦊 Connect
-          </Button>
-        )}
-        <FormComponent />
-        {isConnect && (
-          <Button
-            //onClick={connect}
-            variant='contained'
-            color='primary'
-            sx={{ width: '100%', borderRadius: '0.5rem' }}
-          >
-            🦊 Disconnect
-          </Button>
-        )}
-        {error && <ErrorComponent message={error} />}
+        {isError && <ErrorComponent />}
       </Paper>
     </Box>
   )
