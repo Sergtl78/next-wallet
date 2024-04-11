@@ -5,7 +5,6 @@ import { Box } from '@mui/material'
 
 const ErrorWallet = () => {
   const error = useAppSelector(walletError)
-  console.log('errorEEE', error)
 
   return (
     <Box

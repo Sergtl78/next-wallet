@@ -34,7 +34,6 @@ export const useProvider = () => {
       )) as string[]
       const balance = await provider.getBalance(accounts[0])
       const network = await provider.getNetwork()
-      console.log('chainId', network.chainId)
 
       actions.setIsConnect(true)
       actions.resetError()
@@ -116,7 +115,6 @@ export const useProvider = () => {
     if (!provider) return false
     const network = await provider.getNetwork()
     const chainId = ethers.toBeHex(network.chainId)
-    console.log('chainId', chainId)
 
     const chainIdTestnetList = chainList.map(item =>
       item.network === 'Testnet' ? item.chainId : null
