@@ -125,6 +125,7 @@ export const useProvider = () => {
 
     if (!isTestnet) {
       actions.resetWallet()
+      actions.setIsConnect(false)
       actions.setError('Network not supported')
 
       return false
