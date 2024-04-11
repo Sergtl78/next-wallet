@@ -118,7 +118,7 @@ const FormComponent = () => {
         </Button>
 
         {receiptHash && (
-          <Link href={`${scanUrl}/tx/${txHash}`}>
+          <Link target='_blank' href={`${scanUrl}/tx/${txHash}`}>
             See transaction on {scanName}
           </Link>
         )}
