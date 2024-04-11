@@ -11,7 +11,8 @@ import {
 import {
   getChainId,
   getReceiptHash,
-  getTxHash
+  getTxHash,
+  walletError
 } from '@/redux/features/wallet-slice'
 import { useAppSelector, useFormActions, useWalletActions } from '@/redux/hooks'
 import { formatError } from '@/utils/utils'
@@ -36,6 +37,7 @@ const FormComponent = () => {
   const actionsWallet = useWalletActions()
   const actions = useFormActions()
   const amount = useAppSelector(getAmount)
+  const errorWallet = useAppSelector(walletError)
   const address = useAppSelector(getAddress)
   const chainId = useAppSelector(getChainId)
   const errorAmount = useAppSelector(getErrorAmount)
@@ -107,7 +109,7 @@ const FormComponent = () => {
           required
         />
         <Button
-          disabled={isLoading}
+          disabled={isLoading || !!errorWallet}
           variant='contained'
           color={isLoading ? 'warning' : 'secondary'}
           type='submit'
