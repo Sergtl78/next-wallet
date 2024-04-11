@@ -1,24 +1,18 @@
 'use client'
-import { provider } from '@/hooks/useProvider'
-import { getAccounts, walletActions } from '@/redux/features/wallet-slice'
-import { useActionCreators, useAppSelector } from '@/redux/hooks'
+
+import { useProvider } from '@/hooks/useProvider'
+import { getAccounts } from '@/redux/features/wallet-slice'
+import { useAppSelector } from '@/redux/hooks'
 import { formatAddress } from '@/utils/utils'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import { Box, Button } from '@mui/material'
 type Props = {}
 
 const WalletHeader = (props: Props) => {
-  const action = useActionCreators(walletActions)
   const accounts = useAppSelector(getAccounts)
-  console.log('provider', provider())
-
-  const disconnectWallet = async () => {
-    await provider()?.send('wallet_revokePermissions', [
-      {
-        eth_accounts: {}
-      }
-    ])
-    action.setIsConnect(false)
+  const mask = useProvider()
+  const disconnect = async () => {
+    await mask?.disconnectWallet()
   }
   return (
     <Box
@@ -47,7 +41,7 @@ const WalletHeader = (props: Props) => {
       </Button>
       <Button
         endIcon={<ContentCopyIcon />}
-        onClick={disconnectWallet}
+        onClick={disconnect}
         size='small'
         variant='outlined'
         color='primary'

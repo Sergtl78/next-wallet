@@ -7,7 +7,9 @@ export const makeStore = () => {
     reducer: {
       form: formReducer,
       wallet: walletReducer
-    }
+    },
+
+    devTools: true
   })
 }
 

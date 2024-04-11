@@ -9,6 +9,8 @@ export type WalletState = {
   isLoading: boolean
   isConnect: boolean
   isConnecting: boolean
+  txHash?: string
+  receiptHash?: string
 }
 export const initialWalletState: WalletState = {
   accounts: [''],
@@ -18,7 +20,9 @@ export const initialWalletState: WalletState = {
   isError: false,
   isLoading: false,
   isConnect: false,
-  isConnecting: false
+  isConnecting: false,
+  txHash: undefined,
+  receiptHash: undefined
 }
 
 export const walletSlice = createSlice({
@@ -30,7 +34,10 @@ export const walletSlice = createSlice({
     walletIsError: (state: WalletState) => state.isError,
     walletIsConnect: (state: WalletState) => state.isConnect,
     getAccounts: (state: WalletState) => state.accounts,
+    getBalance: (state: WalletState) => state.balance,
     getChainId: (state: WalletState) => state.chainId,
+    getTxHash: (state: WalletState) => state.txHash,
+    getReceiptHash: (state: WalletState) => state.receiptHash
   },
 
   reducers: {
@@ -48,8 +55,10 @@ export const walletSlice = createSlice({
     },
     setError(state, action: PayloadAction<string>) {
       state.error = action.payload
-      console.log('action.payload', action.payload)
 
+      if (!action.payload) {
+        state.isError = false
+      }
       if (action.payload) {
         state.isError = true
       }
@@ -63,6 +72,18 @@ export const walletSlice = createSlice({
     },
     setIsConnecting(state, action: PayloadAction<boolean>) {
       state.isConnecting = action.payload
+    },
+    setIsLoading(state, action: PayloadAction<boolean>) {
+      state.isLoading = action.payload
+    },
+    setTxHash(state, action: PayloadAction<string>) {
+      state.txHash = action.payload
+    },
+    setReceiptHash(state, action: PayloadAction<string>) {
+      state.receiptHash = action.payload
+    },
+    resetWallet(state) {
+      state = initialWalletState
     }
   }
 })
@@ -71,8 +92,11 @@ export const { actions: walletActions, reducer: walletReducer } = walletSlice
 export const {
   getWallet,
   getAccounts,
+  getBalance,
   getChainId,
   walletError,
   walletIsError,
-  walletIsConnect
+  walletIsConnect,
+  getTxHash,
+  getReceiptHash
 } = walletSlice.selectors

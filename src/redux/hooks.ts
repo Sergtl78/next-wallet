@@ -6,6 +6,8 @@ import {
 } from '@reduxjs/toolkit'
 import { useMemo } from 'react'
 import { useDispatch, useSelector, useStore } from 'react-redux'
+import { formActions } from './features/form-slice'
+import { walletActions } from './features/wallet-slice'
 import type { AppDispatch, AppStore, RootState } from './store'
 
 // Use throughout your app instead of plain `useDispatch` and `useSelector`
@@ -29,3 +31,11 @@ type BoundActions<Actions extends ActionCreatorsMapObject> = {
 type BoundAsyncThunk<Action extends ActionCreator<any>> = (
   ...args: Parameters<Action>
 ) => ReturnType<ReturnType<Action>>
+
+export const useFormActions = () => {
+  return useActionCreators(formActions)
+}
+
+export const useWalletActions = () => {
+  return useActionCreators(walletActions)
+}

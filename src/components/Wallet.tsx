@@ -1,4 +1,5 @@
 'use client'
+import { useProvider } from '@/hooks/useProvider'
 import {
   getChainId,
   walletActions,
@@ -8,10 +9,11 @@ import {
 import { useActionCreators, useAppSelector } from '@/redux/hooks'
 import { Box, Paper } from '@mui/material'
 import { useEffect } from 'react'
-import CheckNetwork from './CheckNetwork'
+import AccountBalance from './AccountBalance'
 import ErrorComponent from './ErrorWallet'
 import FormComponent from './FormComponent'
 import Initial from './Initial'
+import SelectNetwork from './SelectNetwork'
 import WalletHeader from './WalletHeader'
 
 declare global {
@@ -25,24 +27,44 @@ const Wallet = () => {
   const isError = useAppSelector(walletIsError)
   const isConnect = useAppSelector(walletIsConnect)
   const chainId = useAppSelector(getChainId)
+  const mask = useProvider()
 
   useEffect(() => {
     if (!window.ethereum) return
-
-    window.ethereum.on('chainChanged', (chainId: string) => {
-      action.setChainId(chainId)
-      console.log('chainId', chainId)
-
-      window.location.reload()
-    })
-    window.ethereum.on(`accountsChanged`, (accounts: string[]) => {
-      action.setAccounts(accounts)
-    })
-    return () => {
-      window.ethereum.removeListener('chainChanged', () => {})
-      window.ethereum.removeListener('accountsChanged', () => {})
+    const handleChainChanged = async (chainId: string) => {
+      //window.location.reload()
+      const isAvailable = await mask?.checkNetwork()
+      if (!isAvailable) return
+      await mask?.updateAccount()
     }
-  }, [action])
+    const handleAccountsChanged = async () => {
+      await mask?.updateAccount()
+    }
+    const handleDisconnect = () => {
+      action.resetWallet()
+    }
+    const handleConnect = async () => {
+      const isAvailable = await mask?.checkNetwork()
+      if (isAvailable) return
+      await mask?.updateAccount()
+    }
+    /* const provider = new ethers.providers.Web3Provider(window.ethereum, 'any') */
+    mask?.provider.on('network', (newNetwork, oldNetwork) => {
+      if (oldNetwork) {
+        window.location.reload()
+      }
+    })
+    window.ethereum.on('chainChanged', handleChainChanged)
+    window.ethereum.on(`accountsChanged`, handleAccountsChanged)
+    window.ethereum.on('disconnect', handleDisconnect)
+    window.ethereum.on('connect', handleConnect)
+
+    return () => {
+      mask?.provider.off('network')
+      window.ethereum.removeListener('chainChanged', handleChainChanged)
+      window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
+    }
+  }, [action, mask])
 
   return (
     <Box
@@ -74,6 +96,7 @@ const Wallet = () => {
           <Box
             sx={{
               display: 'flex',
+
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
@@ -82,7 +105,8 @@ const Wallet = () => {
             }}
           >
             <WalletHeader />
-            <CheckNetwork currentChainId={chainId} />
+            <SelectNetwork currentChainId={chainId} />
+            <AccountBalance />
             <FormComponent />
           </Box>
         )}

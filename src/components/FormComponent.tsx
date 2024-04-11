@@ -1,115 +1,125 @@
 'use client'
+import { chainList } from '@/constants/chain'
+import { useProvider } from '@/hooks/useProvider'
+import {
+  getAddress,
+  getAmount,
+  getErrorAddress,
+  getErrorAmount,
+  getIsLoading
+} from '@/redux/features/form-slice'
+import {
+  getChainId,
+  getReceiptHash,
+  getTxHash
+} from '@/redux/features/wallet-slice'
+import { useAppSelector, useFormActions, useWalletActions } from '@/redux/hooks'
+import { formatError } from '@/utils/utils'
 import { Button, Stack, TextField } from '@mui/material'
 import { ethers } from 'ethers'
-import { useState } from 'react'
+import Link from 'next/link'
 import { ZodIssue, z } from 'zod'
 
 //prettier-ignore
 const regex = new RegExp('^[+-]?([0-9]{1,})[.,]([0-9]{1,})$')
-const FormSchema = z.object({
-  amount: z.string().regex(regex, {
-    message: 'Не правильное значение.Например: 0.1 или 1,0 0,01'
-  }),
-  address: z.string().refine(value => ethers.isAddress(value), {
-    message: 'Не правильный адрес.'
-  })
+const AmountSchema = z.string().regex(regex, {
+  message: 'Не правильное значение.Например: 0.1 или 1,0 0,01'
+})
+const AddressSchema = z.string().refine(value => ethers.isAddress(value), {
+  message: 'Не правильный адрес.'
 })
 type ZodError = Error & {
   issues: ZodIssue[]
 }
-type FormData = z.infer<typeof FormSchema>
 
 const FormComponent = () => {
-  const [sendData, setSendData] = useState<FormData>({
-    amount: '',
-    address: ''
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [isError, setIsError] = useState<{ amount: boolean; address: boolean }>(
-    { amount: false, address: false }
-  )
-  const [error, setError] = useState<{ amount: string; address: string }>({
-    amount: '',
-    address: ''
-  })
-  const [txs, setTxs] = useState<ethers.TransactionResponse>()
-  const [errorTxs, setErrorTxs] = useState<string>('')
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-    //submission: FormData
-  ) => {
+  const actionsWallet = useWalletActions()
+  const actions = useFormActions()
+  const amount = useAppSelector(getAmount)
+  const address = useAppSelector(getAddress)
+  const chainId = useAppSelector(getChainId)
+  const errorAmount = useAppSelector(getErrorAmount)
+  const errorAddress = useAppSelector(getErrorAddress)
+  const isLoading = useAppSelector(getIsLoading)
+  const txHash = useAppSelector(getTxHash)
+  const receiptHash = useAppSelector(getReceiptHash)
+
+  const mask = useProvider()
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    console.log('address', data.get('address'))
-    console.log('amount', data.get('amount'))
 
-    /*   setError({ amount: '', address: '' })
-    setIsError({ amount: false, address: false })
-    setIsLoading(true)
-    const results = FormSchema.safeParse(submission)
-    if (!results.success) {
-      const errorZod = results.error.format()
-
-      setIsLoading(false)
-      setError({
-        amount: errorZod.amount?._errors[0] || '',
-        address: errorZod.address?._errors[0] || ''
-      })
-      setIsError({
-        amount: !!errorZod.amount?._errors[0],
-        address: !!errorZod.address?._errors[0]
-      })
-      return
+    const resAmount = AmountSchema.safeParse(amount)
+    if (!resAmount.success) {
+      const errorZod = resAmount.error
+      actions.setErrorAmount(errorZod.errors[0].message)
     }
-    setIsLoading(false)
-    setIsError({ amount: false, address: false })
-    setError({ amount: '', address: '' })
+    const resAddress = AddressSchema.safeParse(address)
+    if (!resAddress.success) {
+      const errorZod = resAddress.error
+      actions.setErrorAddress(errorZod.errors[0].message)
+    }
 
-    console.log(results.data) */
-
-    /* await sentPayment({
-      setError: setErrorTxs,
-      setTxs,
-      amount: results.data.amount,
-      address: results.data.address
-    }) */
+    if (resAmount.success && resAddress.success) {
+      actions.setIsLoading(true)
+      try {
+        await mask?.sendTransaction({
+          amount,
+          address
+        })
+      } catch (err: any) {
+        actionsWallet.setError(formatError(err))
+      } finally {
+        actions.setIsLoading(false)
+      }
+    }
   }
+  const scanName = chainList.find(
+    item => item.chainId === chainId
+  )?.explorerName
+  const scanUrl = chainList.find(
+    item => item.chainId === chainId
+  )?.blockExplorerUrl
   return (
     <form style={{ width: '100%' }} onSubmit={event => handleSubmit(event)}>
       <Stack spacing={2} direction='column' sx={{ mb: '1rem', mt: '1rem' }}>
         <TextField
-          helperText={error.amount}
-          error={isError.amount}
+          helperText={errorAmount}
+          error={!!errorAmount}
           type='text'
           variant='filled'
           color='secondary'
           label='Amount'
-          //onChange={e => setSendData({ ...sendData, amount: e.target.value })}
-          //value={sendData.amount}
-          //defaultValue={''}
+          onChange={e => actions.setAmount(e.target.value)}
+          //value={amount}
           fullWidth
           required
         />
         <TextField
-          helperText={error.address}
-          error={isError.address}
+          helperText={errorAddress}
+          error={!!errorAddress}
           type='text'
           variant='filled'
           color='secondary'
           label='Address'
-          //onChange={e => setSendData({ ...sendData, address: e.target.value })}
-          //value={sendData.address}
+          onChange={e => actions.setAddress(e.target.value)}
+          //value={address}
           fullWidth
           required
         />
         <Button
           disabled={isLoading}
           variant='contained'
-          color='secondary'
+          color={isLoading ? 'warning' : 'secondary'}
           type='submit'
         >
           Send
         </Button>
+
+        {receiptHash && (
+          <Link href={`${scanUrl}/tx/${txHash}`}>
+            See transaction on {scanName}
+          </Link>
+        )}
       </Stack>
     </form>
   )
